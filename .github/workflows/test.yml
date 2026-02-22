@@ -8,14 +8,17 @@ on:
 
 jobs:
   test-ts:
-    name: Test ${{ matrix.service }}
+    name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service:
-          - services/auth
-          - services/events
-          - packages/client-sdk
+        include:
+          - name: auth
+            path: services/auth
+          - name: events
+            path: services/events
+          - name: sdk
+            path: packages/client-sdk
     steps:
       - uses: actions/checkout@v6
 
@@ -25,14 +28,14 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-        working-directory: ${{ matrix.service }}
+        working-directory: ${{ matrix.path }}
 
       - name: Test
         run: bun test
-        working-directory: ${{ matrix.service }}
+        working-directory: ${{ matrix.path }}
 
   test-go:
-    name: Test tracker
+    name: test (tracker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
