@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+bin/
+*.exe
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go
+services/tracker/tracker
+
+# Docker
+.docker/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Bun
+*.lockb
+_bun
