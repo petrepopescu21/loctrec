@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../../..");
-const bun = resolve(root, "bin/bun");
+const bun = process.execPath;
 const outDir = resolve(import.meta.dirname, "../src/generated");
 
 const services = [
