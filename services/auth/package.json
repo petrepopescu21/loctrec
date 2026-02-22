@@ -11,7 +11,7 @@
 		"generate:openapi": "bun run scripts/generate-openapi.ts"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.0",
+		"@biomejs/biome": "^2.4.4",
 		"@types/bun": "^1.1.0",
 		"yaml": "^2.8.2"
 	},
