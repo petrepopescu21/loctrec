@@ -12,6 +12,6 @@
 		"indentStyle": "tab"
 	},
 	"files": {
-		"includes": ["**", "!**/dist/", "!**/node_modules/", "!**/src/generated/"]
+		"includes": ["**", "!**/dist", "!**/node_modules", "!src/generated"]
 	}
 }
