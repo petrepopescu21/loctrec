@@ -13,10 +13,8 @@ export interface LocTrecClientConfig {
 export class LocTrecClient {
 	public readonly auth: ReturnType<typeof createClient<AuthPaths>>;
 	public readonly events: ReturnType<typeof createClient<EventsPaths>>;
-	private config: LocTrecClientConfig;
 
 	constructor(config: LocTrecClientConfig) {
-		this.config = config;
 		this.auth = createClient<AuthPaths>({ baseUrl: config.authUrl });
 		this.events = createClient<EventsPaths>({ baseUrl: config.eventsUrl });
 	}
