@@ -32,6 +32,7 @@ else
   ISTIO_OS := $(UNAME_S)
 endif
 SKAFFOLD_VERSION  := 2.14.0
+CLOUD_PROVIDER_KIND_VERSION := 0.10.0
 
 # Infrastructure chart versions
 CERT_MANAGER_VERSION := v1.17.1
@@ -44,6 +45,7 @@ KUBECTL   := $(TOOLS_BIN)/kubectl
 HELM      := $(TOOLS_BIN)/helm
 ISTIOCTL  := $(TOOLS_BIN)/istioctl
 SKAFFOLD  := $(TOOLS_BIN)/skaffold
+CLOUD_PROVIDER_KIND := $(TOOLS_BIN)/cloud-provider-kind
 
 # AKS safety guard — call at the start of any K8s target
 define CHECK_NOT_AKS
@@ -55,7 +57,7 @@ endef
 
 .PHONY: tools tools-clean
 
-tools: $(BUN) $(GOLANGCI) $(KIND) $(KUBECTL) $(HELM) $(ISTIOCTL) $(SKAFFOLD)
+tools: $(BUN) $(GOLANGCI) $(KIND) $(KUBECTL) $(HELM) $(ISTIOCTL) $(SKAFFOLD) $(CLOUD_PROVIDER_KIND)
 
 $(TOOLS_BIN):
 	mkdir -p $(TOOLS_BIN)
@@ -91,6 +93,10 @@ $(SKAFFOLD): | $(TOOLS_BIN)
 	curl -fsSL -o $(SKAFFOLD) https://storage.googleapis.com/skaffold/releases/v$(SKAFFOLD_VERSION)/skaffold-$(UNAME_S)-$(ARCH)
 	chmod +x $(SKAFFOLD)
 	@$(SKAFFOLD) version
+
+$(CLOUD_PROVIDER_KIND): | $(TOOLS_BIN)
+	curl -fsSL https://github.com/kubernetes-sigs/cloud-provider-kind/releases/download/v$(CLOUD_PROVIDER_KIND_VERSION)/cloud-provider-kind_$(CLOUD_PROVIDER_KIND_VERSION)_$(UNAME_S)_$(ARCH).tar.gz | tar xz -C $(TOOLS_BIN) cloud-provider-kind
+	chmod +x $(CLOUD_PROVIDER_KIND)
 
 tools-clean:
 	rm -rf $(TOOLS_BIN)

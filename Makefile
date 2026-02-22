@@ -10,6 +10,8 @@ CLUSTER_NAME := loctrec
        docker-build docker-build-auth docker-build-events docker-build-tracker \
        clean install \
        cluster-create cluster-bootstrap cluster-up cluster-down \
+       bootstrap-repos bootstrap-istio-base bootstrap-istiod bootstrap-istio-gateway \
+       bootstrap-cert-manager bootstrap-postgres bootstrap-redis \
        deploy dev helm-lint
 
 # Install dependencies
@@ -92,40 +94,65 @@ docker-build-tracker:
 	docker build -t loctrec-tracker services/tracker
 
 # K8s cluster
-cluster-create: $(KIND) $(KUBECTL)
+cluster-create: $(KIND) $(KUBECTL) $(CLOUD_PROVIDER_KIND)
 	@$(KIND) delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
 	$(KIND) create cluster --name $(CLUSTER_NAME) --config k8s/kind-config.yaml
 	@$(KUBECTL) cluster-info --context kind-$(CLUSTER_NAME)
+	@echo "Starting cloud-provider-kind (requires sudo)..."
+	@sudo $(CLOUD_PROVIDER_KIND) > /tmp/cloud-provider-kind.log 2>&1 & echo $$! | sudo tee /tmp/cloud-provider-kind.pid > /dev/null
+	@echo "cloud-provider-kind running (PID $$(cat /tmp/cloud-provider-kind.pid)), log: /tmp/cloud-provider-kind.log"
 
-cluster-bootstrap: $(KUBECTL) $(HELM) $(ISTIOCTL)
-	$(call CHECK_NOT_AKS)
+bootstrap-repos: $(HELM)
 	@echo "Adding Helm repos..."
 	@$(HELM) repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 	@$(HELM) repo add jetstack https://charts.jetstack.io --force-update
 	@$(HELM) repo add bitnami https://charts.bitnami.com/bitnami --force-update
 	@$(HELM) repo update
+
+bootstrap-istio-base: bootstrap-repos $(KUBECTL)
+	$(call CHECK_NOT_AKS)
 	@echo "Installing Istio base..."
 	$(HELM) upgrade --install istio-base istio/base -n istio-system --create-namespace --version $(ISTIO_VERSION) --wait
+
+bootstrap-istiod: bootstrap-istio-base
 	@echo "Installing Istiod..."
 	$(HELM) upgrade --install istiod istio/istiod -n istio-system --version $(ISTIO_VERSION) --wait
-	@echo "Installing Istio ingress gateway..."
-	$(HELM) upgrade --install istio-ingressgateway istio/gateway -n istio-system --version $(ISTIO_VERSION) --wait
 	@echo "Enabling sidecar injection..."
 	@$(KUBECTL) label namespace default istio-injection=enabled --overwrite
+
+bootstrap-istio-gateway: bootstrap-istiod $(ISTIOCTL)
+	@echo "Installing Istio ingress gateway..."
+	$(HELM) upgrade --install istio-ingressgateway istio/gateway -n istio-system --version $(ISTIO_VERSION) --wait
+	@echo "Applying Istio Gateway resource..."
+	$(KUBECTL) apply -f k8s/gateway.yaml
+
+bootstrap-cert-manager: bootstrap-repos
+	$(call CHECK_NOT_AKS)
 	@echo "Installing cert-manager..."
 	$(HELM) upgrade --install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --version $(CERT_MANAGER_VERSION) --set crds.enabled=true --wait
+
+bootstrap-postgres: bootstrap-repos
+	$(call CHECK_NOT_AKS)
 	@echo "Installing PostgreSQL..."
 	$(HELM) upgrade --install postgres bitnami/postgresql -f k8s/bootstrap/postgres-values.yaml --wait
+
+bootstrap-redis: bootstrap-repos
+	$(call CHECK_NOT_AKS)
 	@echo "Installing Redis..."
 	$(HELM) upgrade --install redis bitnami/redis -f k8s/bootstrap/redis-values.yaml --wait
-	@echo "Applying Istio Gateway..."
-	$(KUBECTL) apply -f k8s/gateway.yaml
+
+cluster-bootstrap: bootstrap-istio-gateway bootstrap-cert-manager bootstrap-postgres bootstrap-redis
 	@echo "Cluster bootstrap complete."
 
 cluster-up: cluster-create cluster-bootstrap
 	@echo "Cluster ready."
 
 cluster-down: $(KIND)
+	@if [ -f /tmp/cloud-provider-kind.pid ]; then \
+		echo "Stopping cloud-provider-kind..."; \
+		sudo kill $$(cat /tmp/cloud-provider-kind.pid) 2>/dev/null || true; \
+		sudo rm -f /tmp/cloud-provider-kind.pid; \
+	fi
 	$(KIND) delete cluster --name $(CLUSTER_NAME)
 
 # Deploy
