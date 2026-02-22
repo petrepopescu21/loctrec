@@ -1,0 +1,54 @@
+name: Contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-specs:
+    name: Check OpenAPI specs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install auth dependencies
+        run: bun install
+        working-directory: services/auth
+
+      - name: Install events dependencies
+        run: bun install
+        working-directory: services/events
+
+      - name: Generate specs
+        run: |
+          cd services/auth && bun run scripts/generate-openapi.ts
+          cd ../../services/events && bun run scripts/generate-openapi.ts
+
+      - name: Check for drift
+        run: git diff --exit-code services/auth/openapi.yaml services/events/openapi.yaml
+
+  check-clients:
+    name: Check generated clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install client-sdk dependencies
+        run: bun install
+        working-directory: packages/client-sdk
+
+      - name: Generate clients
+        run: cd packages/client-sdk && bun run scripts/generate-clients.ts
+
+      - name: Check for drift
+        run: git diff --exit-code packages/client-sdk/src/generated/
