@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: loctrec-tracker
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8083
+
+env:
+  PORT: "8083"
+  AUTH_SERVICE_URL: "http://auth:8081"
+
+resources:
+  requests:
+    memory: 32Mi
+    cpu: 25m
+  limits:
+    memory: 128Mi
+    cpu: 250m

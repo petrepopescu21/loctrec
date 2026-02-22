@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         service:
-          - services/gateway
           - services/auth
           - services/events
           - packages/client-sdk

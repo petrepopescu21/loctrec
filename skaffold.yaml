@@ -1,0 +1,40 @@
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: loctrec
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: loctrec-auth
+      context: services/auth
+      docker:
+        dockerfile: Dockerfile
+    - image: loctrec-events
+      context: services/events
+      docker:
+        dockerfile: Dockerfile
+    - image: loctrec-tracker
+      context: services/tracker
+      docker:
+        dockerfile: Dockerfile
+
+deploy:
+  helm:
+    releases:
+      - name: auth
+        chartPath: charts/auth
+        setValueTemplates:
+          image.repository: "{{.IMAGE_REPO_loctrec_auth}}"
+          image.tag: "{{.IMAGE_TAG_loctrec_auth}}@{{.IMAGE_DIGEST_loctrec_auth}}"
+      - name: events
+        chartPath: charts/events
+        setValueTemplates:
+          image.repository: "{{.IMAGE_REPO_loctrec_events}}"
+          image.tag: "{{.IMAGE_TAG_loctrec_events}}@{{.IMAGE_DIGEST_loctrec_events}}"
+      - name: tracker
+        chartPath: charts/tracker
+        setValueTemplates:
+          image.repository: "{{.IMAGE_REPO_loctrec_tracker}}"
+          image.tag: "{{.IMAGE_TAG_loctrec_tracker}}@{{.IMAGE_DIGEST_loctrec_tracker}}"

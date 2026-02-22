@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: loctrec-events
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8082
+
+env:
+  PORT: "8082"
+  DATABASE_URL: "postgres://loctrec:loctrec@postgres-postgresql:5432/loctrec?sslmode=disable"
+
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 50m
+  limits:
+    memory: 256Mi
+    cpu: 500m
