@@ -19,7 +19,7 @@ endif
 
 # Tool versions
 BUN_VERSION       := 1.3.9
-GOLANGCI_VERSION  := 1.64.5
+GOLANGCI_VERSION  := 2.10.1
 KIND_VERSION      := 0.27.0
 KUBECTL_VERSION   := 1.32.3
 HELM_VERSION      := 3.17.1
@@ -68,7 +68,7 @@ $(BUN): | $(TOOLS_BIN)
 	@$(BUN) --version
 
 $(GOLANGCI): | $(TOOLS_BIN)
-	GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_VERSION)
+	GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_VERSION)
 	@$(GOLANGCI) --version
 
 $(KIND): | $(TOOLS_BIN)
