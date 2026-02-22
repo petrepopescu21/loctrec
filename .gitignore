@@ -34,3 +34,5 @@ coverage/
 # Bun
 *.lockb
 _bun
+
+settings.local.json
