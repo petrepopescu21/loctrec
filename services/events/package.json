@@ -7,11 +7,18 @@
 		"build": "bun build src/index.ts --outdir dist --target bun",
 		"test": "bun test",
 		"lint": "bunx @biomejs/biome check .",
-		"format": "bunx @biomejs/biome format --write ."
+		"format": "bunx @biomejs/biome format --write .",
+		"generate:openapi": "bun run scripts/generate-openapi.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
-		"@types/bun": "^1.1.0"
+		"@types/bun": "^1.1.0",
+		"yaml": "^2.8.2"
 	},
-	"trustedDependencies": ["@biomejs/biome"]
+	"trustedDependencies": ["@biomejs/biome"],
+	"dependencies": {
+		"@hono/zod-openapi": "^1.2.2",
+		"hono": "^4.12.1",
+		"zod": "^4.3.6"
+	}
 }

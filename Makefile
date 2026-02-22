@@ -12,7 +12,9 @@ CLUSTER_NAME := loctrec
        cluster-create cluster-bootstrap cluster-up cluster-down \
        bootstrap-repos bootstrap-istio-base bootstrap-istiod bootstrap-istio-gateway \
        bootstrap-cert-manager bootstrap-postgres bootstrap-redis \
-       deploy dev helm-lint
+       deploy dev helm-lint \
+       generate generate-specs generate-specs-auth generate-specs-events \
+       generate-clients check-specs check-clients check-generated
 
 # Install dependencies
 install: $(BUN)
@@ -166,6 +168,30 @@ dev: $(SKAFFOLD) $(KUBECTL)
 
 helm-lint: $(HELM)
 	$(HELM) lint charts/auth charts/events charts/tracker
+
+# OpenAPI contracts
+generate-specs: generate-specs-auth generate-specs-events
+
+generate-specs-auth: $(BUN)
+	cd services/auth && $(BUN) run scripts/generate-openapi.ts
+
+generate-specs-events: $(BUN)
+	cd services/events && $(BUN) run scripts/generate-openapi.ts
+
+generate-clients: $(BUN)
+	cd packages/client-sdk && $(BUN) run scripts/generate-clients.ts
+
+generate: generate-specs generate-clients
+
+check-specs: generate-specs
+	@git diff --exit-code services/auth/openapi.yaml services/events/openapi.yaml || \
+		(echo "ERROR: OpenAPI specs are out of date. Run 'make generate-specs' and commit." && exit 1)
+
+check-clients: generate-clients
+	@git diff --exit-code packages/client-sdk/src/generated/ || \
+		(echo "ERROR: Generated clients are out of date. Run 'make generate-clients' and commit." && exit 1)
+
+check-generated: check-specs check-clients
 
 # Clean
 clean:

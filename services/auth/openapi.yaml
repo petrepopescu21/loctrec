@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Auth Service
+  version: 0.0.1
+components:
+  schemas: {}
+  parameters: {}
+paths:
+  /health:
+    get:
+      responses:
+        "200":
+          description: Health check response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                required:
+                  - status
+                  - service
+webhooks: {}
