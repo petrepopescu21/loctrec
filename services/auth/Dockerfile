@@ -10,6 +10,7 @@ FROM oven/bun:1-slim
 
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/db/migrations ./dist/migrations
 COPY --from=builder /app/package.json ./
 
 EXPOSE 8081
