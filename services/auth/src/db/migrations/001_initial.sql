@@ -43,8 +43,3 @@ CREATE TABLE auth.refresh_tokens (
 	revoked_at TIMESTAMPTZ,
 	created_at TIMESTAMPTZ DEFAULT now()
 );
-
-CREATE TABLE auth.schema_migrations (
-	version TEXT PRIMARY KEY,
-	applied_at TIMESTAMPTZ DEFAULT now()
-);
