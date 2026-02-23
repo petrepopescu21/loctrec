@@ -1,0 +1,141 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/petrepopescu21/loctrec
+
+jobs:
+  build-and-push:
+    name: build (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - service: auth
+            context: services/auth
+          - service: events
+            context: services/events
+          - service: tracker
+            context: services/tracker
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-kubectl@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Write kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Add Helm repos
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add istio https://istio-release.storage.googleapis.com/charts
+          helm repo update
+
+      - name: Install Istio
+        run: |
+          helm upgrade --install istio-base istio/base \
+            -n istio-system --create-namespace --wait
+          helm upgrade --install istiod istio/istiod \
+            -n istio-system --wait --timeout 5m \
+            --set pilot.resources.requests.cpu=100m \
+            --set pilot.resources.requests.memory=256Mi \
+            --set pilot.resources.limits.cpu=500m \
+            --set pilot.resources.limits.memory=512Mi \
+            --set pilot.autoscaleEnabled=false \
+            --set pilot.replicaCount=1
+          helm upgrade --install istio-ingressgateway istio/gateway \
+            -n istio-system --wait --timeout 5m \
+            --set resources.requests.cpu=50m \
+            --set resources.requests.memory=64Mi \
+            --set resources.limits.cpu=500m \
+            --set resources.limits.memory=256Mi \
+            --set autoscaling.enabled=false \
+            --set replicaCount=1 \
+            --set service.type=LoadBalancer
+          kubectl label namespace default istio-injection=enabled --overwrite
+
+      - name: Deploy PostgreSQL
+        run: |
+          helm upgrade --install postgres bitnami/postgresql \
+            -f k8s/bootstrap/postgres-values.yaml \
+            --wait --timeout 5m
+
+      - name: Deploy Redis
+        run: |
+          helm upgrade --install redis bitnami/redis \
+            -f k8s/bootstrap/redis-values.yaml \
+            --wait --timeout 5m
+
+      - name: Create GHCR pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply Istio Gateway
+        run: kubectl apply -f k8s/gateway-aks.yaml
+
+      - name: Deploy auth
+        run: |
+          helm upgrade --install auth charts/auth \
+            --set image.repository=${{ env.IMAGE_PREFIX }}-auth \
+            --set image.tag=${{ github.sha }} \
+            --set image.pullPolicy=Always \
+            --set imagePullSecrets[0].name=ghcr-secret \
+            --wait --timeout 5m
+
+      - name: Deploy events
+        run: |
+          helm upgrade --install events charts/events \
+            --set image.repository=${{ env.IMAGE_PREFIX }}-events \
+            --set image.tag=${{ github.sha }} \
+            --set image.pullPolicy=Always \
+            --set imagePullSecrets[0].name=ghcr-secret \
+            --wait --timeout 5m
+
+      - name: Deploy tracker
+        run: |
+          helm upgrade --install tracker charts/tracker \
+            --set image.repository=${{ env.IMAGE_PREFIX }}-tracker \
+            --set image.tag=${{ github.sha }} \
+            --set image.pullPolicy=Always \
+            --set imagePullSecrets[0].name=ghcr-secret \
+            --wait --timeout 5m
