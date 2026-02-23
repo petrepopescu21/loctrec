@@ -244,8 +244,8 @@ jobs:
         run: 'sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/auth/Chart.yaml'
       - name: Deploy auth
         run: |
-          echo "${{ secrets.JWT_PRIVATE_KEY }}" > /tmp/jwt-private.pem
-          echo "${{ secrets.JWT_PUBLIC_KEY }}" > /tmp/jwt-public.pem
+          printf '%s' "${{ secrets.JWT_PRIVATE_KEY }}" > /tmp/jwt-private.pem
+          printf '%s' "${{ secrets.JWT_PUBLIC_KEY }}" > /tmp/jwt-public.pem
           helm upgrade --install auth charts/auth \
             --set image.repository=${{ env.IMAGE_PREFIX }}-auth \
             --set image.tag=${{ github.sha }} \
