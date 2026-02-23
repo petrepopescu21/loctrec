@@ -181,20 +181,26 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Set auth extra args
-        if: matrix.service == 'auth'
-        run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "EXTRA_ARGS<<$EOF" >> $GITHUB_ENV
-          echo '--set-string secrets.JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }} --set-string secrets.JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} --set-string secrets.GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} --set-string secrets.GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} --set env.GOOGLE_REDIRECT_URI=https://20.103.7.163.nip.io/api/auth/oauth/google/callback' >> $GITHUB_ENV
-          echo "$EOF" >> $GITHUB_ENV
-
       - name: Deploy ${{ matrix.service }}
+        env:
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+          JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
+          EXTRA_ARGS=""
+          if [ "${{ matrix.service }}" = "auth" ]; then
+            EXTRA_ARGS=$(printf '%s\n' \
+              "--set-string secrets.JWT_PRIVATE_KEY=$JWT_PRIVATE_KEY" \
+              "--set-string secrets.JWT_PUBLIC_KEY=$JWT_PUBLIC_KEY" \
+              "--set-string secrets.GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" \
+              "--set-string secrets.GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
+              "--set env.GOOGLE_REDIRECT_URI=https://20.103.7.163.nip.io/api/auth/oauth/google/callback")
+          fi
           helm upgrade --install ${{ matrix.service }} ${{ matrix.chart }} \
             --set image.repository=${{ env.IMAGE_PREFIX }}-${{ matrix.service }} \
             --set image.tag=${{ github.sha }} \
             --set image.pullPolicy=Always \
             --set imagePullSecrets[0].name=ghcr-secret \
-            ${{ env.EXTRA_ARGS }} \
+            $EXTRA_ARGS \
             --wait --timeout 5m
