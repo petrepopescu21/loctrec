@@ -13,6 +13,7 @@ service:
 env:
   PORT: "8083"
   AUTH_SERVICE_URL: "http://auth:8081"
+  AUTH_JWKS_URL: "http://auth:8081/.well-known/jwks.json"
 
 resources:
   requests:
