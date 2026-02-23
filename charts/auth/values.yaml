@@ -7,6 +7,9 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
+gateway:
+  host: "20.103.7.163.nip.io"
+
 service:
   port: 8081
 
