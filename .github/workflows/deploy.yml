@@ -73,66 +73,71 @@ jobs:
           helm repo add jetstack https://charts.jetstack.io
           helm repo update
 
-      - name: Install Istio
+      - name: Deploy infra (parallel)
         run: |
-          helm upgrade --install istio-base istio/base \
-            -n istio-system --create-namespace --wait
-          helm upgrade --install istiod istio/istiod \
-            -n istio-system --wait --timeout 5m \
-            --set pilot.resources.requests.cpu=25m \
-            --set pilot.resources.requests.memory=64Mi \
-            --set pilot.resources.limits.cpu=500m \
-            --set pilot.resources.limits.memory=256Mi \
-            --set pilot.autoscaleEnabled=false \
-            --set pilot.replicaCount=1
-          helm upgrade --install istio-ingressgateway istio/gateway \
-            -n istio-system --wait --timeout 5m \
-            --set resources.requests.cpu=10m \
-            --set resources.requests.memory=32Mi \
-            --set resources.limits.cpu=500m \
-            --set resources.limits.memory=256Mi \
-            --set autoscaling.enabled=false \
-            --set replicaCount=1 \
-            --set service.type=LoadBalancer
-          kubectl label namespace default istio-injection=enabled --overwrite
+          set -euo pipefail
 
-      - name: Deploy PostgreSQL
-        run: |
+          # Istio (sequential chain)
+          (
+            set -e
+            helm upgrade --install istio-base istio/base \
+              -n istio-system --create-namespace --wait
+            helm upgrade --install istiod istio/istiod \
+              -n istio-system --wait --timeout 5m \
+              --set pilot.resources.requests.cpu=25m \
+              --set pilot.resources.requests.memory=64Mi \
+              --set pilot.resources.limits.cpu=500m \
+              --set pilot.resources.limits.memory=256Mi \
+              --set pilot.autoscaleEnabled=false \
+              --set pilot.replicaCount=1
+            helm upgrade --install istio-ingressgateway istio/gateway \
+              -n istio-system --wait --timeout 5m \
+              --set resources.requests.cpu=10m \
+              --set resources.requests.memory=32Mi \
+              --set resources.limits.cpu=500m \
+              --set resources.limits.memory=256Mi \
+              --set autoscaling.enabled=false \
+              --set replicaCount=1 \
+              --set service.type=LoadBalancer
+            kubectl label namespace default istio-injection=enabled --overwrite
+          ) &
+          PID_ISTIO=$!
+
+          # PostgreSQL
           helm upgrade --install postgres bitnami/postgresql \
             -f k8s/bootstrap/postgres-values.yaml \
-            --wait --timeout 5m
+            --wait --timeout 5m &
+          PID_PG=$!
 
-      - name: Deploy Redis
-        run: |
+          # Redis
           helm upgrade --install redis bitnami/redis \
             -f k8s/bootstrap/redis-values.yaml \
-            --wait --timeout 5m
+            --wait --timeout 5m &
+          PID_REDIS=$!
 
-      - name: Create GHCR pull secret
-        run: |
+          # cert-manager (sequential chain)
+          (
+            set -e
+            helm upgrade --install cert-manager jetstack/cert-manager \
+              -n cert-manager --create-namespace \
+              --set crds.enabled=true \
+              --wait --timeout 5m
+            kubectl apply -f k8s/cert-manager/cluster-issuer.yaml
+            kubectl apply -f k8s/cert-manager/certificate.yaml
+            kubectl wait --for=condition=Ready certificate/loctrec-tls \
+              -n istio-system --timeout=300s
+          ) &
+          PID_CM=$!
+
+          # GHCR pull secret
           kubectl create secret docker-registry ghcr-secret \
             --docker-server=${{ env.REGISTRY }} \
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GITHUB_TOKEN }} \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply -f - &
+          PID_SECRET=$!
 
-      - name: Install cert-manager
-        run: |
-          helm upgrade --install cert-manager jetstack/cert-manager \
-            -n cert-manager --create-namespace \
-            --set crds.enabled=true \
-            --wait --timeout 5m
-
-      - name: Apply ClusterIssuer
-        run: kubectl apply -f k8s/cert-manager/cluster-issuer.yaml
-
-      - name: Apply Certificate
-        run: kubectl apply -f k8s/cert-manager/certificate.yaml
-
-      - name: Wait for certificate
-        run: |
-          kubectl wait --for=condition=Ready certificate/loctrec-tls \
-            -n istio-system --timeout=300s
+          wait $PID_ISTIO $PID_PG $PID_REDIS $PID_CM $PID_SECRET
 
       - name: Apply Istio Gateway
         run: kubectl apply -f k8s/gateway-aks.yaml
