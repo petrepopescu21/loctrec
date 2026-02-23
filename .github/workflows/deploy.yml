@@ -150,18 +150,10 @@ jobs:
         include:
           - service: auth
             chart: charts/auth
-            extra_args: >-
-              --set-string secrets.JWT_PRIVATE_KEY="${{ secrets.JWT_PRIVATE_KEY }}"
-              --set-string secrets.JWT_PUBLIC_KEY="${{ secrets.JWT_PUBLIC_KEY }}"
-              --set-string secrets.GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-              --set-string secrets.GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
-              --set env.GOOGLE_REDIRECT_URI="https://20.103.7.163.nip.io/api/auth/oauth/google/callback"
           - service: events
             chart: charts/events
-            extra_args: ""
           - service: tracker
             chart: charts/tracker
-            extra_args: ""
     steps:
       - uses: actions/checkout@v6
 
@@ -180,6 +172,14 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Set auth extra args
+        if: matrix.service == 'auth'
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "EXTRA_ARGS<<$EOF" >> $GITHUB_ENV
+          echo '--set-string secrets.JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }} --set-string secrets.JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} --set-string secrets.GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} --set-string secrets.GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} --set env.GOOGLE_REDIRECT_URI=https://20.103.7.163.nip.io/api/auth/oauth/google/callback' >> $GITHUB_ENV
+          echo "$EOF" >> $GITHUB_ENV
+
       - name: Deploy ${{ matrix.service }}
         run: |
           helm upgrade --install ${{ matrix.service }} ${{ matrix.chart }} \
@@ -187,5 +187,5 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --set image.pullPolicy=Always \
             --set imagePullSecrets[0].name=ghcr-secret \
-            ${{ matrix.extra_args }} \
+            ${{ env.EXTRA_ARGS }} \
             --wait --timeout 5m
