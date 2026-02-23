@@ -4,7 +4,7 @@ imagePullSecrets: []
 
 image:
   repository: loctrec-tracker
-  tag: latest
+  tag: ""
   pullPolicy: IfNotPresent
 
 service:

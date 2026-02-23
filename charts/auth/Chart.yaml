@@ -2,4 +2,4 @@ apiVersion: v2
 name: auth
 description: LocTrec auth service
 version: 0.1.0
-appVersion: "0.0.1"
+appVersion: "0.1.0"
