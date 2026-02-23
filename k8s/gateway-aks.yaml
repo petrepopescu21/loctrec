@@ -7,8 +7,19 @@ spec:
     istio: ingressgateway
   servers:
     - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: loctrec-tls
+      hosts:
+        - "20.103.7.163.nip.io"
+    - port:
         number: 80
         name: http
         protocol: HTTP
+      tls:
+        httpsRedirect: true
       hosts:
-        - "*"
+        - "20.103.7.163.nip.io"

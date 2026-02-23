@@ -13,7 +13,7 @@ service:
 env:
   PORT: "8081"
   DATABASE_URL: "postgres://loctrec:loctrec@postgres-postgresql:5432/loctrec?sslmode=disable"
-  GOOGLE_REDIRECT_URI: "http://localhost/api/auth/oauth/google/callback"
+  GOOGLE_REDIRECT_URI: "https://20.103.7.163.nip.io/api/auth/oauth/google/callback"
 
 secrets:
   JWT_PRIVATE_KEY: ""

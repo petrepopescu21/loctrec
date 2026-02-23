@@ -75,6 +75,7 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo add istio https://istio-release.storage.googleapis.com/charts
+          helm repo add jetstack https://charts.jetstack.io
           helm repo update
 
       - name: Install Istio
@@ -120,6 +121,24 @@ jobs:
             --docker-password=${{ secrets.GITHUB_TOKEN }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Install cert-manager
+        run: |
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            -n cert-manager --create-namespace \
+            --set crds.enabled=true \
+            --wait --timeout 5m
+
+      - name: Apply ClusterIssuer
+        run: kubectl apply -f k8s/cert-manager/cluster-issuer.yaml
+
+      - name: Apply Certificate
+        run: kubectl apply -f k8s/cert-manager/certificate.yaml
+
+      - name: Wait for certificate
+        run: |
+          kubectl wait --for=condition=Ready certificate/loctrec-tls \
+            -n istio-system --timeout=300s
+
       - name: Apply Istio Gateway
         run: kubectl apply -f k8s/gateway-aks.yaml
 
@@ -130,6 +149,11 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --set image.pullPolicy=Always \
             --set imagePullSecrets[0].name=ghcr-secret \
+            --set-string secrets.JWT_PRIVATE_KEY="${{ secrets.JWT_PRIVATE_KEY }}" \
+            --set-string secrets.JWT_PUBLIC_KEY="${{ secrets.JWT_PUBLIC_KEY }}" \
+            --set-string secrets.GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --set-string secrets.GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --set env.GOOGLE_REDIRECT_URI="https://20.103.7.163.nip.io/api/auth/oauth/google/callback" \
             --wait --timeout 5m
 
       - name: Deploy events
