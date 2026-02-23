@@ -226,7 +226,7 @@ jobs:
   # ── Deploy services (parallel, after builds + infra) ─────────────
   deploy-auth:
     name: deploy auth
-    needs: [build-auth, gateway, postgres, redis, ghcr-secret]
+    needs: [build-auth, istio, postgres, redis, ghcr-secret]
     runs-on: ubuntu-latest
     concurrency: { group: deploy-aks-auth, cancel-in-progress: false }
     permissions: { contents: read, packages: read }
@@ -260,7 +260,7 @@ jobs:
 
   deploy-events:
     name: deploy events
-    needs: [build-events, gateway, postgres, redis, ghcr-secret]
+    needs: [build-events, istio, postgres, redis, ghcr-secret]
     runs-on: ubuntu-latest
     concurrency: { group: deploy-aks-events, cancel-in-progress: false }
     permissions: { contents: read, packages: read }
@@ -286,7 +286,7 @@ jobs:
 
   deploy-tracker:
     name: deploy tracker
-    needs: [build-tracker, gateway, postgres, redis, ghcr-secret]
+    needs: [build-tracker, istio, postgres, redis, ghcr-secret]
     runs-on: ubuntu-latest
     concurrency: { group: deploy-aks-tracker, cancel-in-progress: false }
     permissions: { contents: read, packages: read }
