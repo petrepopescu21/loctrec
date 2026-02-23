@@ -77,16 +77,16 @@ jobs:
             -n istio-system --create-namespace --wait
           helm upgrade --install istiod istio/istiod \
             -n istio-system --wait --timeout 5m \
-            --set pilot.resources.requests.cpu=100m \
-            --set pilot.resources.requests.memory=256Mi \
+            --set pilot.resources.requests.cpu=25m \
+            --set pilot.resources.requests.memory=64Mi \
             --set pilot.resources.limits.cpu=500m \
-            --set pilot.resources.limits.memory=512Mi \
+            --set pilot.resources.limits.memory=256Mi \
             --set pilot.autoscaleEnabled=false \
             --set pilot.replicaCount=1
           helm upgrade --install istio-ingressgateway istio/gateway \
             -n istio-system --wait --timeout 5m \
-            --set resources.requests.cpu=50m \
-            --set resources.requests.memory=64Mi \
+            --set resources.requests.cpu=10m \
+            --set resources.requests.memory=32Mi \
             --set resources.limits.cpu=500m \
             --set resources.limits.memory=256Mi \
             --set autoscaling.enabled=false \

@@ -6,8 +6,8 @@ master:
     size: 512Mi
   resources:
     requests:
-      memory: 64Mi
-      cpu: 50m
+      memory: 32Mi
+      cpu: 10m
     limits:
       memory: 128Mi
       cpu: 250m
