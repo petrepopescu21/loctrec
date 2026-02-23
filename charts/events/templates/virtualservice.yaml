@@ -10,7 +10,17 @@ spec:
   http:
     - match:
         - uri:
-            prefix: /api/events
+            prefix: /api/events/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.service.port }}
+    - match:
+        - uri:
+            exact: /api/events
       rewrite:
         uri: /
       route:

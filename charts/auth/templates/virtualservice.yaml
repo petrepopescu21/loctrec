@@ -10,7 +10,17 @@ spec:
   http:
     - match:
         - uri:
-            prefix: /api/auth
+            prefix: /api/auth/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.service.port }}
+    - match:
+        - uri:
+            exact: /api/auth
       rewrite:
         uri: /
       route:
