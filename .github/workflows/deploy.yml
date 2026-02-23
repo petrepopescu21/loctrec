@@ -240,7 +240,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
       - name: Set app version
-        run: sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/auth/Chart.yaml
+        run: 'sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/auth/Chart.yaml'
       - name: Deploy auth
         run: |
           echo "${{ secrets.JWT_PRIVATE_KEY }}" > /tmp/jwt-private.pem
@@ -274,7 +274,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
       - name: Set app version
-        run: sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/events/Chart.yaml
+        run: 'sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/events/Chart.yaml'
       - name: Deploy events
         run: |
           helm upgrade --install events charts/events \
@@ -300,7 +300,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
       - name: Set app version
-        run: sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/tracker/Chart.yaml
+        run: 'sed -i "s/^appVersion:.*/appVersion: \"${GITHUB_SHA::7}\"/" charts/tracker/Chart.yaml'
       - name: Deploy tracker
         run: |
           helm upgrade --install tracker charts/tracker \
